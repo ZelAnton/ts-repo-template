@@ -60,7 +60,9 @@ pipeline, and conventions for agents in [CLAUDE.md](CLAUDE.md) /
 
    Then commit the generated `package-lock.json` — it is the resolved,
    reproducible dependency set (the template cannot ship one because its
-   placeholder name is unresolvable).
+   placeholder name is unresolvable). If you intend to keep the
+   agent-instruction files local (step 6), do step 6 **before** this first
+   commit/push so they never enter your pushed history.
 5. Replace the placeholder `greet` function in `src/` with your real API
    (re-export it from `src/index.ts`) and delete the sample test.
 6. **Keep the agent-instruction files local.** This template tracks and ships
@@ -78,6 +80,12 @@ pipeline, and conventions for agents in [CLAUDE.md](CLAUDE.md) /
    Appending `.claude/` last makes it win over the earlier `!.claude/...` ship
    lines. The surviving copy of this recipe downstream is the "Agent instruction
    files are local-only in generated repos" section of [AGENTS.md](AGENTS.md).
+
+   > **Caveat:** if you created the repo via GitHub's **Use this template**, the
+   > template's copies are already in the initial commit on the remote —
+   > untracking removes them from the tip, but they survive in history. For a
+   > repo that must never have contained them, copy the template into a fresh
+   > `git init` and untrack before the first commit.
 
 ## Placeholder tokens
 

@@ -21,6 +21,8 @@ updates:
       prefix: Update
     groups:
       # One PR per weekly run for routine bumps keeps the changelog auto-fill tidy.
+      # Major bumps are deliberately excluded from the group — they arrive as
+      # individual PRs for isolated review.
       package-dependencies:
         patterns:
           - "*"

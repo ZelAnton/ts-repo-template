@@ -197,6 +197,8 @@ echo "  4. Review LICENSE (author/year) and the package metadata in package.json
 echo "  5. Publishing: add the NPM_TOKEN repo secret, or delete"
 echo "     .github/workflows/release.yml and trim the publishing metadata."
 echo "  6. Replace src/greeter.ts with your code and delete the sample test, then commit."
+echo "  7. Optional, before the first push: keep CLAUDE.md/AGENTS.md/.claude out of"
+echo "     the remote — see the 'local-only' section in AGENTS.md."
 
 # 5) Remove both initializers unless asked to keep them.
 if [ "$keep_script" -ne 1 ]; then

@@ -4,8 +4,8 @@ __Description__
 
 ## Requirements
 
-- Node.js 24 (Krypton, LTS) or later — includes npm, which drives everything
-  (installs dependencies, runs build/lint/type/test via `package.json` scripts)
+- Node.js 24 (Krypton, LTS) or later (the floor is declared in `package.json`
+  `engines` and `.nvmrc`; npm warns on a mismatch)
 
 ## Installation
 
@@ -29,7 +29,14 @@ Each GitHub Release ships a `SHA256SUMS` file alongside the published tarball.
 Download them into the same directory, then:
 
 ```sh
-sha256sum -c SHA256SUMS
+sha256sum -c SHA256SUMS        # Linux
+shasum -a 256 -c SHA256SUMS    # macOS
+```
+
+```pwsh
+# Windows: compare against the hash listed in SHA256SUMS
+# (Get-FileHash prints uppercase hex; the comparison is case-insensitive)
+Get-FileHash *.tgz -Algorithm SHA256
 ```
 
 ## Changelog

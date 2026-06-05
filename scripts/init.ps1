@@ -192,6 +192,8 @@ Write-Host "  4. Review LICENSE (author/year) and the package metadata in packag
 Write-Host "  5. Publishing: add the NPM_TOKEN repo secret, or delete"
 Write-Host "     .github/workflows/release.yml and trim the publishing metadata."
 Write-Host "  6. Replace src/greeter.ts with your code and delete the sample test, then commit."
+Write-Host "  7. Optional, before the first push: keep CLAUDE.md/AGENTS.md/.claude out of"
+Write-Host "     the remote — see the 'local-only' section in AGENTS.md."
 
 # Remove both initializers unless asked to keep them.
 if (-not $KeepScript) {
