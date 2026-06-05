@@ -1,0 +1,153 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  yaml-lint:
+    runs-on: ubuntu-latest
+    steps:
+      # Actions are pinned to a full commit SHA (supply-chain hardening); the
+      # trailing comment records the human-readable version. Dependabot bumps the
+      # SHA and updates the comment on its weekly run.
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: '3.x'
+
+      - name: Install yamllint
+        run: pip install yamllint
+
+      # Config is .yamllint.yml — tuned for Actions YAML. Real defects (tabs,
+      # duplicate keys, bad indentation) fail; cosmetic line-length stays a
+      # non-failing warning.
+      - name: Lint YAML
+        run: yamllint .
+
+  lint:
+    name: biome
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      # Template self-test: in the template repo itself the project-name
+      # placeholder token is not a valid npm package name (npm names must be
+      # lowercase), so `npm pack`/`npm publish` would reject package.json. Stamp
+      # the throwaway runner checkout with a dummy name first — this doubles as
+      # an end-to-end test of the init script. The condition deliberately avoids
+      # the literal token (init would substitute it here too): TEMPLATE.md and
+      # the init script coexist only in the template repo (init deletes both),
+      # so in a generated repo this step is a no-op.
+      - name: Initialize template placeholders (no-op in generated repos)
+        shell: bash
+        run: |
+          if [ -f TEMPLATE.md ] && [ -f scripts/init.sh ]; then
+            bash ./scripts/init.sh --project-name template-self-test
+          fi
+      # setup-node installs the Node.js pinned by .nvmrc. No `cache: npm`: the
+      # template ships no package-lock.json (the placeholder name cannot be
+      # resolved), and the cache requires a lockfile.
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: .nvmrc
+      - run: npm install
+      # `biome ci` checks formatting AND the lint set in CI mode (non-zero on
+      # any diff or diagnostic).
+      - run: npx biome ci .
+
+  typecheck:
+    name: tsc
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      # Template self-test — see the `lint` job's comment.
+      - name: Initialize template placeholders (no-op in generated repos)
+        shell: bash
+        run: |
+          if [ -f TEMPLATE.md ] && [ -f scripts/init.sh ]; then
+            bash ./scripts/init.sh --project-name template-self-test
+          fi
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: .nvmrc
+      - run: npm install
+      # `tsc --noEmit` over src + tests is this template's warnings-as-errors
+      # gate for types (strict + noUnused* in tsconfig.json).
+      - run: npm run typecheck
+
+  test:
+    name: test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      # Template self-test — see the `lint` job's comment. `shell: bash` exists
+      # on all three runner OSes (Git Bash on Windows).
+      - name: Initialize template placeholders (no-op in generated repos)
+        shell: bash
+        run: |
+          if [ -f TEMPLATE.md ] && [ -f scripts/init.sh ]; then
+            bash ./scripts/init.sh --project-name template-self-test
+          fi
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: .nvmrc
+      - run: npm install
+      - run: npm test
+
+  build:
+    name: build (dist + pack)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      # Template self-test — see the `lint` job's comment.
+      - name: Initialize template placeholders (no-op in generated repos)
+        shell: bash
+        run: |
+          if [ -f TEMPLATE.md ] && [ -f scripts/init.sh ]; then
+            bash ./scripts/init.sh --project-name template-self-test
+          fi
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: .nvmrc
+      - run: npm install
+      # Prove the package builds and packs cleanly — the same steps the release
+      # runs (pack also validates the package.json name/files manifest).
+      - run: npm run build
+      - run: npm pack --dry-run
+
+  audit:
+    name: npm audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      # Template self-test — see the `lint` job's comment.
+      - name: Initialize template placeholders (no-op in generated repos)
+        shell: bash
+        run: |
+          if [ -f TEMPLATE.md ] && [ -f scripts/init.sh ]; then
+            bash ./scripts/init.sh --project-name template-self-test
+          fi
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: .nvmrc
+      # `npm install` resolves the dependency tree (no committed lockfile in the
+      # template), then `npm audit` scans it against the npm advisory database
+      # (the Node ecosystem's supply-chain audit). Only high/critical advisories
+      # fail the job.
+      - run: npm install
+      - run: npm audit --audit-level=high

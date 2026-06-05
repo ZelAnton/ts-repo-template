@@ -1,0 +1,51 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+# Default indentation. 2 spaces is the Node/TypeScript ecosystem idiom.
+indent_style = space
+indent_size = 2
+tab_width = 2
+
+# Primary source files. Biome owns style (biome.json) — this block only keeps
+# editors aligned with its 2-space output.
+[*.{ts,tsx,js,jsx,mjs,cjs}]
+indent_style = space
+indent_size = 2
+tab_width = 2
+
+# Config files (JSON manifests). YAML has its own section below.
+[*.json]
+indent_style = space
+indent_size = 2
+tab_width = 2
+
+# Windows batch files must have CRLF — CMD will not parse them otherwise.
+[*.{bat,cmd}]
+end_of_line = crlf
+tab_width = 2
+
+# Shell scripts (the init/check-env scripts) — spaces, LF.
+[*.sh]
+indent_style = space
+indent_size = 2
+tab_width = 2
+
+# PowerShell (the init scripts) — spaces, LF.
+[*.{ps1,psm1,psd1}]
+indent_style = space
+indent_size = 4
+tab_width = 4
+
+# YAML cannot use tabs.
+[*.{yaml,yml}]
+indent_style = space
+indent_size = 2
+tab_width = 2
+
+# Markdown — keep trailing whitespace (hard line breaks).
+[*.md]
+trim_trailing_whitespace = false

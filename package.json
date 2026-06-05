@@ -1,0 +1,45 @@
+{
+  "name": "__PackageName__",
+  "version": "0.1.0",
+  "description": "__Description__",
+  "type": "module",
+  "license": "MIT",
+  "author": {
+    "name": "__Author__",
+    "email": "__AuthorEmail__"
+  },
+  "homepage": "https://github.com/__GitHubOwner__/__ProjectName__#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/__GitHubOwner__/__ProjectName__.git"
+  },
+  "bugs": {
+    "url": "https://github.com/__GitHubOwner__/__ProjectName__/issues"
+  },
+  "keywords": [],
+  "engines": {
+    "node": ">=24"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "biome check .",
+    "format": "biome format --write ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.16",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.8"
+  }
+}
