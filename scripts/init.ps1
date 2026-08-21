@@ -131,19 +131,21 @@ Write-Host "==> Initializing template as '$ProjectName' (npm package '$packageNa
 
 # 1) Replace tokens in file contents. Both initializers are skipped: they carry
 #    the literal token strings as search keys, so substituting inside them would
-#    corrupt the sibling script.
+#    corrupt the sibling script. Match each source token once so token-looking
+#    text inside a replacement value is never processed again.
 $siblingSh = Join-Path $PSScriptRoot 'init.sh'
+$tokenPattern = '__ProjectName__|__PackageName__|__Author__|__AuthorEmail__|__GitHubOwner__|__Description__|__Year__'
 $files = Get-ChildItem -Path $repoRoot -File -Recurse | Where-Object {
     -not (Test-Excluded $_.FullName) -and $_.FullName -ne $selfPath -and $_.FullName -ne $siblingSh
 }
 $contentChanged = 0
 foreach ($file in $files) {
     $text = [System.IO.File]::ReadAllText($file.FullName)
-    $new = $text
     $map = if ($jsonFileExtensions -contains $file.Extension) { $jsonReplacements } else { $replacements }
-    foreach ($key in $map.Keys) {
-        $new = $new.Replace($key, $map[$key])
-    }
+    $new = [regex]::Replace($text, $tokenPattern, [System.Text.RegularExpressions.MatchEvaluator]{
+        param([System.Text.RegularExpressions.Match]$match)
+        [string]$map[$match.Value]
+    })
     if ($new -ne $text) {
         # UTF-8 without BOM, LF preserved — matches .gitattributes (eol=lf).
         [System.IO.File]::WriteAllText($file.FullName, $new, (New-Object System.Text.UTF8Encoding($false)))
