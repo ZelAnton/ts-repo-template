@@ -92,19 +92,22 @@ async function snapshot(root: string): Promise<Map<string, string>> {
 
 async function initialize(initializer: Initializer): Promise<Map<string, string>> {
   const temporaryRoot = await mkdtemp(join(tmpdir(), "ts-repo-template-"));
+  const fixtureRoot = join(temporaryRoot, "repo");
   try {
-    await cp(repoRoot, temporaryRoot, {
+    await cp(repoRoot, fixtureRoot, {
       recursive: true,
       filter: (source: string): boolean => {
         const name = basename(source);
-        return ![".git", ".jj", "node_modules", "dist", "coverage", "artifacts"].includes(name);
+        return ![".git", ".jj", ".work", "node_modules", "dist", "coverage", "artifacts"].includes(
+          name,
+        );
       },
     });
 
-    const scriptPath = join(temporaryRoot, "scripts", initializer.name);
+    const scriptPath = join(fixtureRoot, "scripts", initializer.name);
     try {
       execFileSync(initializer.command, initializer.args(scriptPath), {
-        cwd: temporaryRoot,
+        cwd: fixtureRoot,
         encoding: "utf8",
         stdio: "pipe",
       });
@@ -113,7 +116,7 @@ async function initialize(initializer: Initializer): Promise<Map<string, string>
       throw new Error(`${initializer.name} failed: ${detail}`, { cause: error });
     }
 
-    const files = await snapshot(temporaryRoot);
+    const files = await snapshot(fixtureRoot);
     const packageJson = JSON.parse(files.get("package.json") ?? "") as {
       name: string;
       description: string;
