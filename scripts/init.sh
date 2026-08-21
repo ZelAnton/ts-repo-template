@@ -112,26 +112,32 @@ echo "==> Initializing template as '$project_name' (npm package '$package_name')
 
 # Literal, backslash-safe token replacement via awk's ENVIRON (no escape
 # processing, unlike bash's ${var//pat/repl} which mangles doubled backslashes).
-# The whole file is handled in BEGIN so no record splitting adds/drops a newline.
+# Match each source token once so token-looking text inside a replacement value
+# is never processed again. The whole file is handled in BEGIN so no record
+# splitting adds/drops a newline.
 substitute_tokens() {
   awk '
-    function repl(s, tok, val,   out, i) {
+    function replacement(tok) {
+      if (tok == "__ProjectName__") return ENVIRON["TPL_PROJECT"]
+      if (tok == "__PackageName__") return ENVIRON["TPL_PACKAGE"]
+      if (tok == "__Author__") return ENVIRON["TPL_AUTHOR"]
+      if (tok == "__AuthorEmail__") return ENVIRON["TPL_AUTHOR_EMAIL"]
+      if (tok == "__GitHubOwner__") return ENVIRON["TPL_OWNER"]
+      if (tok == "__Description__") return ENVIRON["TPL_DESC"]
+      return ENVIRON["TPL_YEAR"]
+    }
+    function repl(s,   out, tok) {
       out = ""
-      while ((i = index(s, tok)) > 0) {
-        out = out substr(s, 1, i - 1) val
-        s = substr(s, i + length(tok))
+      while (match(s, /__ProjectName__|__PackageName__|__Author__|__AuthorEmail__|__GitHubOwner__|__Description__|__Year__/)) {
+        tok = substr(s, RSTART, RLENGTH)
+        out = out substr(s, 1, RSTART - 1) replacement(tok)
+        s = substr(s, RSTART + RLENGTH)
       }
       return out s
     }
     BEGIN {
       s = ENVIRON["TPL_SRC"]
-      s = repl(s, "__ProjectName__", ENVIRON["TPL_PROJECT"])
-      s = repl(s, "__PackageName__", ENVIRON["TPL_PACKAGE"])
-      s = repl(s, "__Author__",      ENVIRON["TPL_AUTHOR"])
-      s = repl(s, "__AuthorEmail__", ENVIRON["TPL_AUTHOR_EMAIL"])
-      s = repl(s, "__GitHubOwner__", ENVIRON["TPL_OWNER"])
-      s = repl(s, "__Description__", ENVIRON["TPL_DESC"])
-      s = repl(s, "__Year__",        ENVIRON["TPL_YEAR"])
+      s = repl(s)
       printf "%s", s
     }'
 }
