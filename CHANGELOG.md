@@ -15,5 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Preserve initializer parameter values that contain template tokens.
+- Escape JSON control characters in initializer parameter values.
+- Preserve repetitive initializer parameter values when using `init.sh`.
 
 [Unreleased]: https://github.com/__GitHubOwner__/__ProjectName__/commits/main

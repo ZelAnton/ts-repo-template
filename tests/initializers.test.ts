@@ -8,35 +8,75 @@ import { describe, expect, it } from "vitest";
 const repoRoot = fileURLToPath(new URL("../", import.meta.url));
 const token = (name: string): string => `__${name}__`;
 
-const projectName = `A${token("Author")}B`;
-const author = `Writer ${token("Description")}`;
-const authorEmail = "writer@example.com";
-const githubOwner = "example-owner";
-const description = `A ${token("ProjectName")} ${token("PackageName")}`;
-const packageName = "a-author-b";
+type InitializationParameters = {
+  projectName: string;
+  author: string;
+  authorEmail: string;
+  githubOwner: string;
+  description: string;
+};
+
+type InitializationCase = {
+  parameters: InitializationParameters;
+  packageName: string;
+};
+
+const tokenLookingCase: InitializationCase = {
+  parameters: {
+    projectName: `A${token("Author")}B`,
+    author: `Writer ${token("Description")}`,
+    authorEmail: "writer@example.com",
+    githubOwner: "example-owner",
+    description: `A ${token("ProjectName")} ${token("PackageName")}`,
+  },
+  packageName: "a-author-b",
+};
+
+const controlCharacterCase: InitializationCase = {
+  parameters: {
+    projectName: "JsonControls",
+    author: 'Author "quoted"\\path\r\nline\tcolumn\bbackspace',
+    authorEmail: 'mail\\"box\r\n\t\b@example.com',
+    githubOwner: 'owner\\"name\r\n\t\b',
+    description:
+      'Description "quoted"\\path\r\nline\tcolumn\bbackspace\fform-feed\u0001start-of-heading',
+  },
+  packageName: "jsoncontrols",
+};
+
+const repeatedBlockCase: InitializationCase = {
+  parameters: {
+    projectName: "A".repeat(32),
+    author: "B".repeat(32),
+    authorEmail: `${"c".repeat(32)}@example.com`,
+    githubOwner: "d".repeat(32),
+    description: " ".repeat(32),
+  },
+  packageName: "a".repeat(32),
+};
 
 type Initializer = {
   name: string;
   command: string;
-  args: (scriptPath: string) => string[];
+  args: (scriptPath: string, parameters: InitializationParameters) => string[];
 };
 
 const initializers: Initializer[] = [
   {
     name: "init.sh",
     command: "bash",
-    args: (): string[] => [
+    args: (_scriptPath: string, parameters: InitializationParameters): string[] => [
       "./scripts/init.sh",
       "--project-name",
-      projectName,
+      parameters.projectName,
       "--author",
-      author,
+      parameters.author,
       "--author-email",
-      authorEmail,
+      parameters.authorEmail,
       "--github-owner",
-      githubOwner,
+      parameters.githubOwner,
       "--description",
-      description,
+      parameters.description,
       "--year",
       "2026",
       "--keep-script",
@@ -45,20 +85,20 @@ const initializers: Initializer[] = [
   {
     name: "init.ps1",
     command: "pwsh",
-    args: (scriptPath: string): string[] => [
+    args: (scriptPath: string, parameters: InitializationParameters): string[] => [
       "-NoProfile",
       "-File",
       scriptPath,
       "-ProjectName",
-      projectName,
+      parameters.projectName,
       "-Author",
-      author,
+      parameters.author,
       "-AuthorEmail",
-      authorEmail,
+      parameters.authorEmail,
       "-GitHubOwner",
-      githubOwner,
+      parameters.githubOwner,
       "-Description",
-      description,
+      parameters.description,
       "-Year",
       "2026",
       "-KeepScript",
@@ -90,7 +130,11 @@ async function snapshot(root: string): Promise<Map<string, string>> {
   return result;
 }
 
-async function initialize(initializer: Initializer): Promise<Map<string, string>> {
+async function initialize(
+  initializer: Initializer,
+  testCase: InitializationCase,
+): Promise<Map<string, string>> {
+  const { parameters, packageName } = testCase;
   const temporaryRoot = await mkdtemp(join(tmpdir(), "ts-repo-template-"));
   const fixtureRoot = join(temporaryRoot, "repo");
   try {
@@ -106,7 +150,7 @@ async function initialize(initializer: Initializer): Promise<Map<string, string>
 
     const scriptPath = join(fixtureRoot, "scripts", initializer.name);
     try {
-      execFileSync(initializer.command, initializer.args(scriptPath), {
+      execFileSync(initializer.command, initializer.args(scriptPath, parameters), {
         cwd: fixtureRoot,
         encoding: "utf8",
         stdio: "pipe",
@@ -124,17 +168,18 @@ async function initialize(initializer: Initializer): Promise<Map<string, string>
       homepage: string;
     };
     expect(packageJson.name).toBe(packageName);
-    expect(packageJson.description).toBe(description);
-    expect(packageJson.author.name).toBe(author);
-    expect(packageJson.author.email).toBe(authorEmail);
-    expect(packageJson.homepage).toContain(projectName);
-    expect(packageJson.homepage).toContain(githubOwner);
+    expect(packageJson.description).toBe(parameters.description);
+    expect(packageJson.author.name).toBe(parameters.author);
+    expect(packageJson.author.email).toBe(parameters.authorEmail);
+    expect(packageJson.homepage).toBe(
+      `https://github.com/${parameters.githubOwner}/${parameters.projectName}#readme`,
+    );
     const generatedText = [...files.values()].join("\n");
-    expect(generatedText).toContain(projectName);
-    expect(generatedText).toContain(author);
-    expect(generatedText).toContain(authorEmail);
-    expect(generatedText).toContain(githubOwner);
-    expect(generatedText).toContain(description);
+    expect(generatedText).toContain(parameters.projectName);
+    expect(generatedText).toContain(parameters.author);
+    expect(generatedText).toContain(parameters.authorEmail);
+    expect(generatedText).toContain(parameters.githubOwner);
+    expect(generatedText).toContain(parameters.description);
     return files;
   } finally {
     await rm(temporaryRoot, { recursive: true, force: true });
@@ -143,7 +188,23 @@ async function initialize(initializer: Initializer): Promise<Map<string, string>
 
 describe("template initializers", () => {
   it("preserve token-looking parameter values and produce equivalent output", async () => {
-    const outputs = await Promise.all(initializers.map((initializer) => initialize(initializer)));
+    const outputs = await Promise.all(
+      initializers.map((initializer) => initialize(initializer, tokenLookingCase)),
+    );
+    expect(outputs[1]).toEqual(outputs[0]);
+  }, 60_000);
+
+  it("round-trip JSON control characters and produce equivalent output", async () => {
+    const outputs = await Promise.all(
+      initializers.map((initializer) => initialize(initializer, controlCharacterCase)),
+    );
+    expect(outputs[1]).toEqual(outputs[0]);
+  }, 60_000);
+
+  it("round-trip repeated identical 16-byte blocks and produce equivalent output", async () => {
+    const outputs = await Promise.all(
+      initializers.map((initializer) => initialize(initializer, repeatedBlockCase)),
+    );
     expect(outputs[1]).toEqual(outputs[0]);
   }, 60_000);
 });
