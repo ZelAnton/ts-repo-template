@@ -108,12 +108,36 @@ $replacements = [ordered]@{
 }
 
 # Values written into JSON files (package.json name/description/author/urls) sit
-# inside double-quoted strings — a literal " or \ in an author/description would
-# break the manifest, so escape them for .json targets. The derived package name
-# is [a-z0-9-] only, so it is safe.
+# inside double-quoted strings, so escape quotes, backslashes, and every C0
+# control character. The derived package name is [a-z0-9-] only, so it is safe.
+function ConvertTo-JsonStringContent([string]$value) {
+    $builder = [System.Text.StringBuilder]::new()
+    foreach ($character in $value.ToCharArray()) {
+        $codePoint = [int]$character
+        $escaped = switch ($codePoint) {
+            0x08 { '\b' }
+            0x09 { '\t' }
+            0x0A { '\n' }
+            0x0C { '\f' }
+            0x0D { '\r' }
+            0x22 { '\"' }
+            0x5C { '\\' }
+            default {
+                if ($codePoint -lt 0x20) {
+                    '\u{0:x4}' -f $codePoint
+                } else {
+                    [string]$character
+                }
+            }
+        }
+        [void]$builder.Append($escaped)
+    }
+    return $builder.ToString()
+}
+
 $jsonReplacements = [ordered]@{}
 foreach ($key in $replacements.Keys) {
-    $jsonReplacements[$key] = $replacements[$key].Replace('\', '\\').Replace('"', '\"')
+    $jsonReplacements[$key] = ConvertTo-JsonStringContent $replacements[$key]
 }
 $jsonFileExtensions = @('.json')
 

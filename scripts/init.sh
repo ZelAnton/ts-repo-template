@@ -97,10 +97,24 @@ self="$script_dir/$(basename "$0")"
 sibling_ps1="$script_dir/init.ps1"
 
 # Values written into JSON strings (package.json name/description/author/urls)
-# sit inside double-quoted strings — escape backslash then quote so a literal "
-# or \ in an author/description can't break the manifest. The derived package
-# name is [a-z0-9-] only, so it needs no escaping.
-json_escape() { printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g'; }
+# sit inside double-quoted strings, so escape quotes, backslashes, and every C0
+# control character. The derived package name is [a-z0-9-] only, so it is safe.
+json_escape() {
+  local octet
+  for octet in $(printf '%s' "$1" | od -A n -t o1); do
+    case "$octet" in
+      010) printf '\\b' ;;
+      011) printf '\\t' ;;
+      012) printf '\\n' ;;
+      014) printf '\\f' ;;
+      015) printf '\\r' ;;
+      042) printf '\\"' ;;
+      134) printf '\\\\' ;;
+      00?|01?|02?|03?) printf '\\u%04x' "$((0$octet))" ;;
+      ???) printf '%b' "\\$octet" ;;
+    esac
+  done
+}
 project_j="$(json_escape "$project_name")"
 author_j="$(json_escape "$author")"
 author_email_j="$(json_escape "$author_email")"
