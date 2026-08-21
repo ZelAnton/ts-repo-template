@@ -10,6 +10,8 @@ const token = (name: string): string => `__${name}__`;
 
 const projectName = `A${token("Author")}B`;
 const author = `Writer ${token("Description")}`;
+const authorEmail = "writer@example.com";
+const githubOwner = "example-owner";
 const description = `A ${token("ProjectName")} ${token("PackageName")}`;
 const packageName = "a-author-b";
 
@@ -23,12 +25,16 @@ const initializers: Initializer[] = [
   {
     name: "init.sh",
     command: "bash",
-    args: (scriptPath: string): string[] => [
-      scriptPath,
+    args: (): string[] => [
+      "./scripts/init.sh",
       "--project-name",
       projectName,
       "--author",
       author,
+      "--author-email",
+      authorEmail,
+      "--github-owner",
+      githubOwner,
       "--description",
       description,
       "--year",
@@ -47,6 +53,10 @@ const initializers: Initializer[] = [
       projectName,
       "-Author",
       author,
+      "-AuthorEmail",
+      authorEmail,
+      "-GitHubOwner",
+      githubOwner,
       "-Description",
       description,
       "-Year",
@@ -107,16 +117,20 @@ async function initialize(initializer: Initializer): Promise<Map<string, string>
     const packageJson = JSON.parse(files.get("package.json") ?? "") as {
       name: string;
       description: string;
-      author: { name: string };
+      author: { name: string; email: string };
       homepage: string;
     };
     expect(packageJson.name).toBe(packageName);
     expect(packageJson.description).toBe(description);
     expect(packageJson.author.name).toBe(author);
+    expect(packageJson.author.email).toBe(authorEmail);
     expect(packageJson.homepage).toContain(projectName);
+    expect(packageJson.homepage).toContain(githubOwner);
     const generatedText = [...files.values()].join("\n");
     expect(generatedText).toContain(projectName);
     expect(generatedText).toContain(author);
+    expect(generatedText).toContain(authorEmail);
+    expect(generatedText).toContain(githubOwner);
     expect(generatedText).toContain(description);
     return files;
   } finally {
