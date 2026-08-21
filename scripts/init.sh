@@ -101,7 +101,7 @@ sibling_ps1="$script_dir/init.ps1"
 # control character. The derived package name is [a-z0-9-] only, so it is safe.
 json_escape() {
   local octet
-  for octet in $(printf '%s' "$1" | od -A n -t o1); do
+  for octet in $(printf '%s' "$1" | od -A n -t o1 -v); do
     case "$octet" in
       010) printf '\\b' ;;
       011) printf '\\t' ;;

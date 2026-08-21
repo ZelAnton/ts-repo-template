@@ -44,6 +44,17 @@ const controlCharacterCase: InitializationCase = {
   packageName: "jsoncontrols",
 };
 
+const repeatedBlockCase: InitializationCase = {
+  parameters: {
+    projectName: "A".repeat(32),
+    author: "B".repeat(32),
+    authorEmail: `${"c".repeat(32)}@example.com`,
+    githubOwner: "d".repeat(32),
+    description: " ".repeat(32),
+  },
+  packageName: "a".repeat(32),
+};
+
 type Initializer = {
   name: string;
   command: string;
@@ -186,6 +197,13 @@ describe("template initializers", () => {
   it("round-trip JSON control characters and produce equivalent output", async () => {
     const outputs = await Promise.all(
       initializers.map((initializer) => initialize(initializer, controlCharacterCase)),
+    );
+    expect(outputs[1]).toEqual(outputs[0]);
+  }, 60_000);
+
+  it("round-trip repeated identical 16-byte blocks and produce equivalent output", async () => {
+    const outputs = await Promise.all(
+      initializers.map((initializer) => initialize(initializer, repeatedBlockCase)),
     );
     expect(outputs[1]).toEqual(outputs[0]);
   }, 60_000);
