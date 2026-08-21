@@ -135,7 +135,7 @@ Write-Host "==> Initializing template as '$ProjectName' (npm package '$packageNa
 #    text inside a replacement value is never processed again.
 $siblingSh = Join-Path $PSScriptRoot 'init.sh'
 $tokenPattern = '__ProjectName__|__PackageName__|__Author__|__AuthorEmail__|__GitHubOwner__|__Description__|__Year__'
-$files = Get-ChildItem -Path $repoRoot -File -Recurse | Where-Object {
+$files = Get-ChildItem -Force -Path $repoRoot -File -Recurse | Where-Object {
     -not (Test-Excluded $_.FullName) -and $_.FullName -ne $selfPath -and $_.FullName -ne $siblingSh
 }
 $contentChanged = 0
@@ -157,7 +157,7 @@ Write-Host "    Updated contents in $contentChanged file(s)." -ForegroundColor D
 # 2) Rename files and folders whose name contains a name token. Deepest paths
 #    first so child renames don't invalidate parent paths. (The TS layout ships
 #    no token-named paths today; the sweep keeps renames working if you add any.)
-$named = Get-ChildItem -Path $repoRoot -Recurse | Where-Object {
+$named = Get-ChildItem -Force -Path $repoRoot -Recurse | Where-Object {
     -not (Test-Excluded $_.FullName) -and ($_.Name -like '*__ProjectName__*' -or $_.Name -like '*__PackageName__*')
 } | Sort-Object { $_.FullName.Length } -Descending
 foreach ($item in $named) {
